@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>FlightClub.FsClient</RootNamespace>
+    <AssemblyName>FlightClub.FsClient</AssemblyName>
+
+    <!-- Self-contained deployment: end users do NOT need .NET installed -->
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.2" />
+    <PackageReference Include="QRCoder" Version="1.6.0" />
+  </ItemGroup>
+
+  <!-- SimConnect managed wrapper (from MSFS 2024 SDK) -->
+  <ItemGroup>
+    <Reference Include="Microsoft.FlightSimulator.SimConnect">
+      <HintPath>Lib\Microsoft.FlightSimulator.SimConnect.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <!-- Native SimConnect DLLs copied to output -->
+  <ItemGroup>
+    <None Include="Lib\SimConnect.dll" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Lib\SimConnect.lib" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>
