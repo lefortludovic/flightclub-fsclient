@@ -125,7 +125,7 @@
                     </Border>
 
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                        <TextBlock Text="Server" Style="{StaticResource CardTitle}" />
+                        <TextBlock Text="FlightClub.be server" Style="{StaticResource CardTitle}" />
                         <TextBlock Text="{Binding HubStatus}" Style="{StaticResource CardDetail}" />
                     </StackPanel>
 

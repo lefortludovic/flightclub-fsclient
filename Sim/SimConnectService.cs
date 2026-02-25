@@ -26,6 +26,7 @@ public class SimConnectService : IDisposable
 
             _simConnect.OnRecvOpen += SimConnect_OnRecvOpen;
             _simConnect.OnRecvQuit += SimConnect_OnRecvQuit;
+            _simConnect.OnRecvSimobjectData += SimConnect_OnRecvSimobjectData;
             _simConnect.OnRecvSimobjectDataBytype += SimConnect_OnRecvSimobjectDataBytype;
             _simConnect.OnRecvException += SimConnect_OnRecvException;
 
@@ -39,6 +40,19 @@ public class SimConnectService : IDisposable
         }
         catch (Exception ex)
         {
+            // Clean up partially-created connection to avoid getting stuck
+            // with IsConnected returning true on a broken connection
+            if (_simConnect != null)
+            {
+                try { _simConnect.Dispose(); } catch { }
+                _simConnect = null;
+            }
+            if (_hwndSource != null)
+            {
+                try { _hwndSource.RemoveHook(WndProc); } catch { }
+                _hwndSource = null;
+            }
+
             OnError?.Invoke(ex);
             OnStatusChanged?.Invoke("Failed to connect to MSFS");
         }
@@ -103,7 +117,7 @@ public class SimConnectService : IDisposable
 
     private void SimConnect_OnRecvOpen(SimConnect sender, SIMCONNECT_RECV_OPEN data)
     {
-        OnStatusChanged?.Invoke($"Connected to {data.szApplicationName}");
+        OnStatusChanged?.Invoke("Connected to MSFS");
         StartPeriodicDataRequest();
     }
 
@@ -112,24 +126,37 @@ public class SimConnectService : IDisposable
         Disconnect();
     }
 
+    private void SimConnect_OnRecvSimobjectData(SimConnect sender, SIMCONNECT_RECV_SIMOBJECT_DATA data)
+    {
+        if (data.dwRequestID == (uint)DataRequests.AircraftPositionRequest)
+        {
+            HandleAircraftData(data.dwData[0]);
+        }
+    }
+
     private void SimConnect_OnRecvSimobjectDataBytype(SimConnect sender, SIMCONNECT_RECV_SIMOBJECT_DATA_BYTYPE data)
     {
         if (data.dwRequestID == (uint)DataRequests.AircraftPositionRequest)
         {
-            var position = (SimConnectAircraftPosition)data.dwData[0];
-            var aircraftData = new AircraftData
-            {
-                Latitude = position.Latitude,
-                Longitude = position.Longitude,
-                Altitude = position.Altitude,
-                GroundSpeed = position.GroundVelocity,
-                Heading = position.Heading,
-                OnGround = position.SimOnGround > 0.5,
-                Timestamp = DateTime.UtcNow
-            };
-
-            OnAircraftDataUpdated?.Invoke(aircraftData);
+            HandleAircraftData(data.dwData[0]);
         }
+    }
+
+    private void HandleAircraftData(object rawData)
+    {
+        var position = (SimConnectAircraftPosition)rawData;
+        var aircraftData = new AircraftData
+        {
+            Latitude = position.Latitude,
+            Longitude = position.Longitude,
+            Altitude = position.Altitude,
+            GroundSpeed = position.GroundVelocity,
+            Heading = position.Heading,
+            OnGround = position.SimOnGround > 0.5,
+            Timestamp = DateTime.UtcNow
+        };
+
+        OnAircraftDataUpdated?.Invoke(aircraftData);
     }
 
     private void SimConnect_OnRecvException(SimConnect sender, SIMCONNECT_RECV_EXCEPTION data)

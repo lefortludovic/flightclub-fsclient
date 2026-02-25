@@ -29,10 +29,10 @@
     </Reference>
   </ItemGroup>
 
-  <!-- Native SimConnect DLLs copied to output -->
+  <!-- Native SimConnect DLLs copied to output root (Link flattens the Lib\ path) -->
   <ItemGroup>
-    <None Include="Lib\SimConnect.dll" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="Lib\SimConnect.lib" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Lib\SimConnect.dll" Link="SimConnect.dll" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Lib\SimConnect.lib" Link="SimConnect.lib" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

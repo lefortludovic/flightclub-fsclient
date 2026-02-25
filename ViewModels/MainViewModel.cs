@@ -102,6 +102,8 @@ public partial class MainViewModel : ObservableObject
         _windowHandle = handle;
         _autoConnectCts = new CancellationTokenSource();
 
+        SimStatus = "Initializing...";
+
         _ = AutoStartSessionAsync(_autoConnectCts.Token);
         _ = AutoConnectSimAsync(_autoConnectCts.Token);
     }
@@ -176,48 +178,77 @@ public partial class MainViewModel : ObservableObject
 
     private async Task AutoConnectSimAsync(CancellationToken ct)
     {
-        while (!ct.IsCancellationRequested)
+        try
         {
-            if (!_simConnectService.IsConnected && _windowHandle != IntPtr.Zero)
+            while (!ct.IsCancellationRequested)
             {
-                _dispatcher.Invoke(() =>
+                try
                 {
-                    SimStatus = "Looking for MSFS...";
-                    _simConnectService.Connect(_windowHandle);
-                    IsSimConnected = _simConnectService.IsConnected;
-                    if (IsSimConnected)
+                    if (!_simConnectService.IsConnected && _windowHandle != IntPtr.Zero)
                     {
-                        IsStreaming = true;
-                    }
-                });
+                        _dispatcher.Invoke(() =>
+                        {
+                            SimStatus = "Looking for MSFS...";
+                            _simConnectService.Connect(_windowHandle);
+                            IsSimConnected = _simConnectService.IsConnected;
+                            if (IsSimConnected)
+                            {
+                                IsStreaming = true;
+                            }
+                        });
 
-                if (_simConnectService.IsConnected)
+                        if (_simConnectService.IsConnected)
+                        {
+                            // Connected — wait until disconnect, then resume retrying
+                            while (_simConnectService.IsConnected && !ct.IsCancellationRequested)
+                            {
+                                await Task.Delay(SimRetryIntervalMs, ct);
+                            }
+
+                            // Disconnected — update state and fall through to retry
+                            _dispatcher.Invoke(() =>
+                            {
+                                IsSimConnected = false;
+                                IsStreaming = false;
+                                HasAircraftData = false;
+                                SimStatus = "MSFS disconnected, reconnecting...";
+                            });
+                        }
+                    }
+                }
+                catch (OperationCanceledException)
                 {
-                    // Connected — wait until disconnect, then resume retrying
-                    while (_simConnectService.IsConnected && !ct.IsCancellationRequested)
-                    {
-                        await Task.Delay(SimRetryIntervalMs, ct);
-                    }
-
-                    // Disconnected — update state and fall through to retry
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    // Catch any exception (including JIT/DLL loading errors for SimConnect)
+                    // so the retry loop keeps running instead of dying silently
                     _dispatcher.Invoke(() =>
                     {
+                        SimStatus = $"Error: {ex.Message}";
                         IsSimConnected = false;
-                        IsStreaming = false;
-                        HasAircraftData = false;
-                        SimStatus = "MSFS disconnected, reconnecting...";
                     });
                 }
-            }
 
-            try
-            {
-                await Task.Delay(SimRetryIntervalMs, ct);
+                try
+                {
+                    await Task.Delay(SimRetryIntervalMs, ct);
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
+                }
             }
-            catch (OperationCanceledException)
+        }
+        catch (Exception ex)
+        {
+            // Last resort: catch anything that escaped inner handlers
+            _dispatcher.Invoke(() =>
             {
-                return;
-            }
+                SimStatus = $"Fatal: {ex.GetType().Name}: {ex.Message}";
+                IsSimConnected = false;
+            });
         }
     }
 
