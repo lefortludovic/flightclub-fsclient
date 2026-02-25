@@ -102,4 +102,14 @@ public partial class MainWindow : Window
 
         await ViewModel.CleanupAsync();
     }
+
+    private void SessionId_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        var sessionId = ViewModel.SessionId;
+        if (!string.IsNullOrEmpty(sessionId))
+        {
+            System.Windows.Clipboard.SetText(sessionId);
+            ViewModel.PairingStatus = "Session ID copied!";
+        }
+    }
 }

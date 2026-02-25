@@ -48,6 +48,9 @@ public partial class MainViewModel : ObservableObject
     private BitmapImage? _qrCodeImage;
 
     [ObservableProperty]
+    private string _sessionId = string.Empty;
+
+    [ObservableProperty]
     private double _latitude;
 
     [ObservableProperty]
@@ -130,6 +133,7 @@ public partial class MainViewModel : ObservableObject
                 _dispatcher.Invoke(() =>
                 {
                     QrCodeImage = QrCodeHelper.GenerateQrCode(pairingUrl);
+                    SessionId = _currentSession.SessionId;
                     PairingStatus = "Scan QR code to pair...";
                 });
 
